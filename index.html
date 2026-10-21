@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pig vs Bear: Honey Heist - Playable Web Game</title>
+  <meta name="description" content="A cute, arcade honey-catching game where Pig protects the hives and Bear executes the sweet heist! Playable on desktop and mobile.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-app" class="game-app">
+    <!-- Top Global Bar -->
+    <header id="top-bar" class="top-bar">
+      <div class="brand">
+        <span class="honey-drop-icon">🍯</span>
+        <span class="game-mini-title">Honey Heist</span>
+      </div>
+      <div class="top-stats">
+        <div id="coin-counter-badge" class="stat-pill coin-pill" title="Total Coins">
+          <svg class="coin-svg" viewBox="0 0 24 24" width="18" height="18">
+            <circle cx="12" cy="12" r="10" fill="#FBBF24" stroke="#D97706" stroke-width="2"/>
+            <circle cx="12" cy="12" r="7" fill="#F59E0B" opacity="0.6"/>
+            <text x="12" y="15" text-anchor="middle" font-size="10" font-weight="bold" fill="#78350F">C</text>
+          </svg>
+          <span id="top-coins-val">0</span>
+        </div>
+        <div id="best-score-badge" class="stat-pill best-pill" title="Best Score">
+          <span class="trophy-icon">🏆</span>
+          <span id="top-best-val">0</span>
+        </div>
+        <button id="btn-sound-toggle" class="icon-btn" aria-label="Toggle Sound" title="Toggle Sound">
+          <span id="sound-icon">🔊</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Game Viewport -->
+    <main id="game-viewport" class="game-viewport">
+      <!-- Sky and Parallax Environment -->
+      <div id="sky-layer" class="env-layer sky-layer">
+        <div class="celestial-body sun"></div>
+        <div class="celestial-body moon"></div>
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+      </div>
+      <div class="env-layer distant-trees"></div>
+      <div class="env-layer honey-branch">
+        <div class="honeycomb-hanging">
+          <svg viewBox="0 0 40 50" width="36" height="45">
+            <path d="M20 0 L20 10 M10 15 L30 15 L35 25 L30 35 L10 35 L5 25 Z" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
+            <circle cx="20" cy="25" r="4" fill="#78350F"/>
+            <circle cx="20" cy="40" r="3" fill="#FBBF24" class="honey-drip-anim"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- In-Game Arena for Catching -->
+      <div id="game-arena" class="game-arena">
+        <!-- Floating Opponent Peeker -->
+        <div id="opponent-peeker" class="opponent-peeker" aria-hidden="true">
+          <div id="opponent-svg-box"></div>
+          <div class="opponent-speech-bubble" id="opponent-bubble">"My honey!"</div>
+        </div>
+
+        <!-- Falling Objects Container -->
+        <div id="falling-container" class="falling-container"></div>
+
+        <!-- Floating Text / Effects Layer -->
+        <div id="fx-layer" class="fx-layer"></div>
+
+        <!-- Warning Alert Banner when Rival is about to charge -->
+        <div id="rival-warning-banner" class="rival-warning-banner hidden">
+          <span class="warning-icon">⚠️</span>
+          <span id="rival-warning-text" class="warning-text">RIVAL CHARGING! DODGE!</span>
+        </div>
+
+        <!-- Active Rival Charger (Rival animal attempts to tackle & stop the player) -->
+        <div id="rival-charger-entity" class="rival-charger-entity hidden">
+          <div class="rival-speech-bubble" id="rival-speech">"HALT!"</div>
+          <div id="rival-avatar-wrap" class="rival-avatar-wrap"></div>
+          <div class="rival-dust-puff"></div>
+        </div>
+
+        <!-- The Player Catcher Entity with Honey Backpack -->
+        <div id="player-entity" class="player-entity">
+          <div id="player-avatar-wrap" class="player-avatar-wrap"></div>
+          <div class="player-shadow"></div>
+        </div>
+      </div>
+
+      <!-- Ground Layer -->
+      <div class="env-layer ground-layer">
+        <div class="grass-detail"></div>
+        <div class="flower flower-1">🌸</div>
+        <div class="flower flower-2">🌼</div>
+        <div class="flower flower-3">🌸</div>
+      </div>
+
+      <!-- In-Game Glass HUD -->
+      <div id="game-hud" class="game-hud">
+        <div class="hud-left">
+          <div id="hud-lives-container" class="hud-lives-container" title="Lives Remaining">
+            <span class="heart-slot active" id="heart-1">❤️</span>
+            <span class="heart-slot active" id="heart-2">❤️</span>
+            <span class="heart-slot active" id="heart-3">❤️</span>
+          </div>
+        </div>
+        <div class="hud-center">
+          <div class="score-display">
+            <span class="score-label">HONEY</span>
+            <span id="hud-score-val" class="score-val">0</span>
+            <span class="score-target" id="hud-target-val">/ 50</span>
+          </div>
+        </div>
+        <div class="hud-right">
+          <div id="hud-combo-badge" class="hud-combo-badge hidden">
+            <span class="combo-fire">🔥</span>
+            <span id="hud-combo-multiplier">x2</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Touch Controls Bar -->
+      <div id="mobile-controls-bar" class="mobile-controls-bar">
+        <button id="btn-touch-left" class="touch-dir-btn" aria-label="Move Left">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="touch-hint">Drag or tap anywhere to move</div>
+        <button id="btn-touch-right" class="touch-dir-btn" aria-label="Move Right">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ================= SCREENS & MODALS ================= -->
+
+      <!-- 1. START / HOME SCREEN -->
+      <section id="screen-start" class="game-screen screen-start active">
+        <div class="screen-dialog glass-card">
+          <div class="title-banner">
+            <div class="tagline">🍯 A SWEET FOREST SHOWDOWN 🐻</div>
+            <h1 class="main-title">Pig vs Bear</h1>
+            <h2 class="sub-title">Honey Heist</h2>
+          </div>
+
+          <!-- Cute Animated Showdown Preview -->
+          <div class="duo-preview-showcase">
+            <div class="duo-character duo-pig">
+              <div id="start-pig-avatar" class="preview-avatar-box"></div>
+              <span class="duo-name">Pig Guard</span>
+            </div>
+            <div class="duo-vs">
+              <div class="vs-circle">VS</div>
+              <div class="pot-bounce">🍯</div>
+            </div>
+            <div class="duo-character duo-bear">
+              <div id="start-bear-avatar" class="preview-avatar-box"></div>
+              <span class="duo-name">Bear Bandit</span>
+            </div>
+          </div>
+
+          <div class="start-choice-prompt">
+            <p>Choose your hero to start playing:</p>
+            <div class="char-pick-row">
+              <button id="btn-pick-pig" class="hero-pick-btn active" data-char="pig">
+                <span class="pick-label">Play as Pig 🐷</span>
+                <span class="pick-sub">Defend the Honey!</span>
+              </button>
+              <button id="btn-pick-bear" class="hero-pick-btn" data-char="bear">
+                <span class="pick-label">Play as Bear 🐻</span>
+                <span class="pick-sub">Steal the Honey!</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="menu-action-buttons">
+            <button id="btn-start-game" class="cta-btn primary-btn pulse-anim">
+              <span>▶ PLAY NOW</span>
+            </button>
+            <button id="btn-open-shop" class="cta-btn secondary-btn">
+              <span>👗 DRESS-UP SHOP</span>
+            </button>
+            <button id="btn-open-rules" class="cta-btn text-btn">
+              <span>📖 How to Play</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. DRESS-UP & CUSTOMIZATION SHOP -->
+      <section id="screen-shop" class="game-screen screen-shop hidden">
+        <div class="screen-dialog glass-card shop-modal">
+          <div class="modal-header">
+            <h2>👗 Dress-Up & Wardrobe</h2>
+            <div class="shop-balance">
+              <span class="coin-svg-small">🪙</span>
+              <span id="shop-coin-balance">0</span> Coins
+            </div>
+            <button id="btn-close-shop" class="close-x-btn" aria-label="Close Shop">✖</button>
+          </div>
+
+          <div class="shop-body">
+            <!-- Left: Live Interactive Character Preview -->
+            <div class="shop-preview-side">
+              <div class="char-toggle-pills">
+                <button id="shop-toggle-pig" class="char-pill active" data-char="pig">🐷 Pig</button>
+                <button id="shop-toggle-bear" class="char-pill" data-char="bear">🐻 Bear</button>
+              </div>
+              <div class="live-stage">
+                <div id="shop-character-preview" class="shop-character-preview"></div>
+                <div class="stage-pedestal"></div>
+              </div>
+              <div id="equipped-summary-text" class="equipped-summary">Customizing: Pig</div>
+            </div>
+
+            <!-- Right: Categories & Wardrobe Items Grid -->
+            <div class="shop-items-side">
+              <div class="category-tabs" id="shop-category-tabs">
+                <button class="cat-tab active" data-category="hats">🎩 Hats</button>
+                <button class="cat-tab" data-category="glasses">👓 Glasses</button>
+                <button class="cat-tab" data-category="outfits">👔 Outfits</button>
+                <button class="cat-tab" data-category="colors">🎨 Colors</button>
+              </div>
+
+              <!-- Dynamic Grid of Items -->
+              <div id="shop-items-grid" class="shop-items-grid"></div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="btn-shop-play" class="cta-btn primary-btn">
+              <span>READY TO PLAY! 🎮</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. RULES & INSTRUCTIONS MODAL -->
+      <section id="modal-rules" class="modal-overlay hidden">
+        <div class="rules-card glass-card">
+          <div class="modal-header">
+            <h3>📖 Honey Heist Rules</h3>
+            <button id="btn-close-rules" class="close-x-btn" aria-label="Close Rules">✖</button>
+          </div>
+          <div class="rules-body">
+            <div class="rule-item">
+              <span class="rule-icon">🍯</span>
+              <div>
+                <strong>Catch Honey Jars:</strong>
+                <p>+1 Point & +1 Coin. Speed up every 10 points!</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">✨</span>
+              <div>
+                <strong>Golden Honey Jars:</strong>
+                <p>Rare & sweet! Gives +5 Points and +5 Coins instantly.</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">🐝</span>
+              <div>
+                <strong>Avoid Bees:</strong>
+                <p>Dodge the buzzing bees! Catching one stings and loses 1 life.</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">🏃</span>
+              <div>
+                <strong>Escape the Rival:</strong>
+                <p>The rival animal charges across to stop your heist! Watch the warning and dodge them in time!</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">❤️</span>
+              <div>
+                <strong>Sweet Hearts:</strong>
+                <p>Restores 1 lost life (max 3 lives).</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">🔥</span>
+              <div>
+                <strong>Combo Multiplier:</strong>
+                <p>Catch jars in a row without missing to build x2, x3, x4 multipliers!</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">🏆</span>
+              <div>
+                <strong>Goal to Win:</strong>
+                <p>Reach 50 Points to win the round and take home 25 bonus coins!</p>
+              </div>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">🎮</span>
+              <div>
+                <strong>Controls:</strong>
+                <p>Desktop: Arrow Keys or [A] / [D]. Mobile: Touch & drag or tap on-screen buttons.</p>
+              </div>
+            </div>
+          </div>
+          <button id="btn-understood-rules" class="cta-btn primary-btn">Got It, Let's Play!</button>
+        </div>
+      </section>
+
+      <!-- 4. GAME OVER SCREEN -->
+      <section id="screen-game-over" class="game-screen screen-game-over hidden">
+        <div class="screen-dialog glass-card game-over-card">
+          <div class="result-badge defeat-badge">💔 ROUND OVER</div>
+          <h2 class="result-title">Out of Honey!</h2>
+          <p id="game-over-flavor" class="flavor-text">The opponent managed to snatch the sweet stash!</p>
+
+          <div class="results-stats-board">
+            <div class="result-stat-box">
+              <span class="stat-num" id="go-score">0</span>
+              <span class="stat-name">Honey Score</span>
+            </div>
+            <div class="result-stat-box">
+              <span class="stat-num" id="go-coins">+0</span>
+              <span class="stat-name">Coins Earned</span>
+            </div>
+            <div class="result-stat-box">
+              <span class="stat-num" id="go-combo">x1</span>
+              <span class="stat-name">Max Combo</span>
+            </div>
+          </div>
+
+          <div id="new-high-score-banner" class="new-record-banner hidden">
+            🎉 NEW PERSONAL BEST! 🎉
+          </div>
+
+          <div class="menu-action-buttons">
+            <button id="btn-replay-game" class="cta-btn primary-btn pulse-anim">
+              <span>🔄 TRY AGAIN</span>
+            </button>
+            <button id="btn-go-to-shop" class="cta-btn secondary-btn">
+              <span>👗 WARDROBE SHOP</span>
+            </button>
+            <button id="btn-go-to-home" class="cta-btn text-btn">
+              <span>🏠 Main Menu</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. WIN CELEBRATION SCREEN -->
+      <section id="screen-win" class="game-screen screen-win hidden">
+        <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+        <div class="screen-dialog glass-card win-card">
+          <div class="result-badge victory-badge">👑 VICTORY!</div>
+          <h2 class="result-title" id="win-headline">Sweet Success!</h2>
+          <p id="win-flavor" class="flavor-text">You reached 50 points and claimed master of the hive!</p>
+
+          <div class="win-hero-dancer">
+            <div id="win-character-preview" class="win-character-preview"></div>
+          </div>
+
+          <div class="bonus-coins-celebration">
+            <span class="bonus-label">VICTORY BONUS:</span>
+            <span class="bonus-amount">+25 🪙 COINS!</span>
+          </div>
+
+          <div class="results-stats-board">
+            <div class="result-stat-box">
+              <span class="stat-num" id="win-score">50</span>
+              <span class="stat-name">Final Score</span>
+            </div>
+            <div class="result-stat-box">
+              <span class="stat-num" id="win-coins-total">+0</span>
+              <span class="stat-name">Total Coins</span>
+            </div>
+            <div class="result-stat-box">
+              <span class="stat-num" id="win-best-combo">x3</span>
+              <span class="stat-name">Peak Combo</span>
+            </div>
+          </div>
+
+          <div class="menu-action-buttons">
+            <button id="btn-continue-endless" class="cta-btn primary-btn pulse-anim">
+              <span>🚀 KEEP PLAYING (ENDLESS)</span>
+            </button>
+            <button id="btn-win-shop" class="cta-btn secondary-btn">
+              <span>👗 UNLOCK OUTFITS</span>
+            </button>
+            <button id="btn-win-home" class="cta-btn text-btn">
+              <span>🏠 Main Menu</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
